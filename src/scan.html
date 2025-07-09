@@ -19,9 +19,14 @@
   <body class="bg-white font-sans" x-data="scanCamera()">
     <div class="min-h-screen flex flex-col justify-between max-w-md mx-auto">
       <!-- Header -->
-      <div class="flex items-center px-4 py-3 border-b">
-        <span class="text-xl mr-2">←</span>
-        <span class="font-medium text-gray-800">Scan Object</span>
+      <div class="flex justify-between items-center px-4 py-3 border-b">
+        <div>
+          <span class="text-xl mr-2">←</span>
+          <span class="font-medium text-gray-800">Scan Object</span>
+        </div>
+        <button class="text-sm text-red-600 hover:underline" @click="logout()">
+          Logout
+        </button>
       </div>
 
       <!-- Main Content -->

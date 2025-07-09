@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Histori Deteksi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body class="bg-white">
+    <!-- Header -->
+    <!-- Header -->
+    <div
+      class="text-center py-4 border-b font-semibold text-lg flex justify-between items-center px-4"
+    >
+      <span>Histori Deteksi</span>
+      <button class="text-sm text-red-600 hover:underline" @click="logout()">
+        Logout
+      </button>
+    </div>
+
+    <!-- Deteksi List -->
+    <div x-data="historiDeteksi()" x-init="init()">
+      <template x-for="item in items" :key="item.id">
+        <div class="border rounded-lg p-4 mb-4 shadow">
+          <div class="flex items-center space-x-4">
+            <img
+              :src="item.image.replaceAll('\\', '/')"
+              alt="Detected Image"
+              class="w-16 h-16 rounded bg-gray-100 object-cover"
+            />
+            <div class="flex-1">
+              <span
+                class="inline-block bg-gray-800 text-white text-xs font-semibold px-2 py-1 rounded mb-1"
+                x-text="item.label"
+              ></span>
+              <p class="text-sm text-gray-600" x-text="item.timestamp"></p>
+              <div class="w-full h-2 bg-gray-200 rounded mt-1">
+                <div
+                  class="bg-gray-800 h-full rounded"
+                  :style="`width: ${item.confidence}%`"
+                ></div>
+              </div>
+              <p
+                class="text-xs text-gray-600 mt-1"
+                x-text="`${item.confidence}% Confidence`"
+              ></p>
+            </div>
+            <div>
+              <button
+                @click="item.expanded = !item.expanded"
+                class="text-gray-500 hover:text-gray-700 text-xl"
+                :class="item.expanded ? 'rotate-90' : ''"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+          <div
+            x-show="item.expanded"
+            x-transition
+            class="mt-4 border-t pt-3 text-sm text-gray-600"
+          >
+            <p>
+              <strong>Mitigasi:</strong> <span x-text="item.mitigation"></span>
+            </p>
+            <p>
+              <strong>Deskripsi:</strong>
+              <span x-text="item.description"></span>
+            </p>
+            <div class="mt-2 flex space-x-2">
+              <button
+                class="px-4 py-1 bg-red-600 text-white rounded text-xs"
+                @click="hapusItem(item)"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Bottom Nav -->
+    <div
+      class="fixed bottom-0 left-0 right-0 border-t bg-white flex justify-around py-2"
+    >
+      <a href="./scan.html"
+        ><button class="flex flex-col items-center text-xs text-gray-600">
+          <svg
+            class="w-6 h-6 mb-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2M16 4h2a2 2 0 012 2v2M16 20h2a2 2 0 002-2v-2"
+            />
+          </svg>
+          Scan
+        </button></a
+      >
+      <a href="./upload.html"
+        ><button class="flex flex-col items-center text-xs text-gray-600">
+          <svg
+            class="w-6 h-6 mb-1"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0l-4 4m4-4l4 4"
+            />
+          </svg>
+          Upload
+        </button></a
+      >
+      <a href="./history.html"
+        ><button
+          class="flex flex-col items-center text-xs text-black font-semibold"
+        >
+          <svg
+            class="w-6 h-6 mb-1"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+          >
+            <path d="M12 8v4l3 3M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z" />
+          </svg>
+          History
+        </button></a
+      >
+    </div>
+
+    <script src="js/detect.js"></script>
+  </body>
+</html>

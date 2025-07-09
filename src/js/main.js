@@ -119,7 +119,7 @@ function loginForm() {
           timer: 2000,
           showConfirmButton: false,
         }).then(() => {
-          window.location.href = "/dashboard.html"; // ganti sesuai halaman kamu
+          window.location.href = "./scan.html"; // ganti sesuai halaman kamu
         });
       } catch (e) {
         Swal.fire({

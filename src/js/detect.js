@@ -1,4 +1,5 @@
 window.API_BASE_URL = "http://127.0.0.1:8000/api";
+BASE_URL = "http://127.0.0.1:8000";
 
 function scanCamera() {
   return {
@@ -112,6 +113,381 @@ function scanCamera() {
         this.ctx.font = "16px Arial";
         this.ctx.fillText(label, x1 + 5, y1 - 5);
       });
+    },
+
+    logout() {
+      Swal.fire({
+        title: "Logout?",
+        text: "Anda yakin ingin keluar?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Logout",
+        cancelButtonText: "Batal",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const refresh = localStorage.getItem("refresh_token");
+
+          if (refresh) {
+            try {
+              await fetch(`${window.API_BASE_URL}/logout/`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refresh }),
+              });
+            } catch (err) {
+              console.warn("Gagal logout dari server:", err);
+            }
+          }
+
+          // Hapus token lokal dan arahkan ke login
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "./login.html";
+        }
+      });
+    },
+  };
+}
+
+function deteksiSampah() {
+  return {
+    imageFile: null,
+    imagePreview: null,
+
+    handleFileChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.imageFile = file;
+        this.imagePreview = URL.createObjectURL(file);
+      }
+    },
+
+    async checkAndRefreshToken() {
+      const access = localStorage.getItem("access_token");
+      const refresh = localStorage.getItem("refresh_token");
+
+      // Tidak ada token sama sekali
+      if (!access || !refresh) {
+        Swal.fire("Unauthorized", "Silakan login terlebih dahulu.", "error");
+        window.location.href = "./login.html";
+        return null;
+      }
+
+      // Coba verifikasi access token
+      const verifyRes = await fetch(`${window.API_BASE_URL}/token/verify/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: access }),
+      });
+
+      if (verifyRes.status === 200) {
+        return access; // token masih valid
+      }
+
+      // Token tidak valid → coba refresh
+      const refreshRes = await fetch(`${window.API_BASE_URL}/token/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh: refresh }),
+      });
+
+      if (refreshRes.status === 200) {
+        const data = await refreshRes.json();
+        localStorage.setItem("access_token", data.access);
+        return data.access;
+      } else {
+        Swal.fire("Session Expired", "Silakan login ulang.", "error");
+        window.location.href = "./login.html";
+        return null;
+      }
+    },
+
+    async submitDetection() {
+      if (!this.imageFile) {
+        Swal.fire(
+          "Gagal",
+          "Silakan pilih atau ambil gambar terlebih dahulu.",
+          "warning"
+        );
+        return;
+      }
+
+      const token = await this.checkAndRefreshToken();
+      if (!token) return;
+
+      const formData = new FormData();
+      formData.append("image", this.imageFile);
+
+      try {
+        const response = await fetch(`${window.API_BASE_URL}/detect/image/`, {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("Gagal memproses deteksi");
+
+        const result = await response.json();
+        localStorage.setItem("detectionResult", JSON.stringify(result));
+        window.location.href = "./hasildeteksi.html";
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Error", "Terjadi kesalahan saat deteksi.", "error");
+      }
+    },
+
+    logout() {
+      Swal.fire({
+        title: "Logout?",
+        text: "Anda yakin ingin keluar?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Logout",
+        cancelButtonText: "Batal",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const refresh = localStorage.getItem("refresh_token");
+
+          if (refresh) {
+            try {
+              await fetch(`${window.API_BASE_URL}/logout/`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refresh }),
+              });
+            } catch (err) {
+              console.warn("Gagal logout dari server:", err);
+            }
+          }
+
+          // Hapus token lokal dan arahkan ke login
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "./login.html";
+        }
+      });
+    },
+  };
+}
+
+function detectionResult() {
+  return {
+    result: null,
+    loadResult() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        Swal.fire(
+          "Unauthorized",
+          "Silakan login terlebih dahulu.",
+          "error"
+        ).then(() => {
+          window.location.href = "./login.html";
+          return;
+        });
+      }
+
+      const savedResult = localStorage.getItem("detectionResult");
+      console.log(savedResult);
+      if (!savedResult) {
+        Swal.fire(
+          "Data tidak ditemukan",
+          "Silakan lakukan deteksi terlebih dahulu.",
+          "warning"
+        );
+        window.location.href = "./upload.html";
+        return;
+      }
+      this.result = JSON.parse(savedResult);
+    },
+    formatConfidence(conf) {
+      return (conf * 100).toFixed(2) + "%";
+    },
+  };
+}
+
+function historiDeteksi() {
+  return {
+    items: [],
+
+    async refreshToken() {
+      const refresh = localStorage.getItem("refresh_token");
+      if (!refresh) {
+        Swal.fire("Sesi Berakhir", "Silakan login kembali.", "warning");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "./login.html";
+        return null;
+      }
+
+      try {
+        const res = await fetch(`${window.API_BASE_URL}/token/refresh/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ refresh }),
+        });
+
+        if (!res.ok) throw new Error("Refresh token tidak valid");
+
+        const data = await res.json();
+        localStorage.setItem("access_token", data.access);
+        return data.access;
+      } catch (err) {
+        console.error("Gagal refresh token:", err);
+        Swal.fire("Sesi Berakhir", "Silakan login kembali.", "warning");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "./login.html";
+        return null;
+      }
+    },
+
+    async fetchHistory() {
+      let token = localStorage.getItem("access_token");
+
+      if (!token) {
+        Swal.fire("Unauthorized", "Silakan login terlebih dahulu.", "error");
+        window.location.href = "./login.html";
+        return;
+      }
+
+      try {
+        let response = await fetch(`${window.API_BASE_URL}/history/`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          token = await this.refreshToken();
+          if (!token) return;
+
+          response = await fetch(`${window.API_BASE_URL}/history/`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+
+        if (!response.ok) throw new Error("Gagal memuat histori");
+
+        const historyData = await response.json();
+
+        this.items = historyData.map((item) => {
+          const deteksi = item.detection;
+          const waktu = new Date(deteksi.detection_time).toLocaleString(
+            "id-ID",
+            {
+              dateStyle: "long",
+              timeStyle: "short",
+            }
+          );
+
+          const imageUrl = `${window.API_BASE_URL.replace(
+            /\/api\/?$/,
+            ""
+          )}/media/${deteksi.result_image_path.replace(/\\/g, "/")}`;
+
+          return {
+            id: item.id,
+            image: imageUrl,
+            label: deteksi.label.label,
+            confidence: Math.round(deteksi.total_confidence * 100),
+            timestamp: waktu,
+            description: deteksi.label.description || "-",
+            mitigation: deteksi.label.mitigation || "-",
+            expanded: false, //
+          };
+        });
+      } catch (err) {
+        console.error(err);
+        Swal.fire("Error", "Terjadi kesalahan saat memuat histori.", "error");
+      }
+    },
+
+    lihatDetail(item) {
+      localStorage.setItem("selectedHistory", JSON.stringify(item));
+      window.location.href = "./detail.html";
+    },
+
+    async hapusItem(item) {
+      const konfirmasi = await Swal.fire({
+        title: "Hapus Histori?",
+        text: "Data ini akan dihapus permanen.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Hapus",
+        cancelButtonText: "Batal",
+      });
+
+      if (konfirmasi.isConfirmed) {
+        const token = localStorage.getItem("access_token");
+        try {
+          const res = await fetch(
+            `${window.API_BASE_URL}/detect/delete/${item.id}/`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (!res.ok) throw new Error("Gagal menghapus");
+
+          this.items = this.items.filter((i) => i.id !== item.id);
+
+          Swal.fire("Berhasil", "Data telah dihapus.", "success");
+        } catch (err) {
+          console.error(err);
+          Swal.fire("Gagal", "Tidak dapat menghapus data.", "error");
+        }
+      }
+    },
+
+    logout() {
+      Swal.fire({
+        title: "Logout?",
+        text: "Anda yakin ingin keluar?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Logout",
+        cancelButtonText: "Batal",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const refresh = localStorage.getItem("refresh_token");
+
+          if (refresh) {
+            try {
+              await fetch(`${window.API_BASE_URL}/logout/`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refresh }),
+              });
+            } catch (err) {
+              console.warn("Gagal logout dari server:", err);
+            }
+          }
+
+          // Hapus token lokal dan arahkan ke login
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "./login.html";
+        }
+      });
+    },
+
+    init() {
+      this.fetchHistory();
     },
   };
 }
