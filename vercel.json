@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/src/screen.html",
+      "permanent": true
+    }
+  ]
+}
