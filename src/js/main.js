@@ -1,4 +1,5 @@
-window.API_BASE_URL = "http://127.0.0.1:8000/api";
+// window.API_BASE_URL = "http://127.0.0.1:8000/api";
+window.API_BASE_URL = "http://3.25.79.183:8000/api";
 
 // Fetch Register
 function registerForm() {

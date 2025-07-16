@@ -1,5 +1,7 @@
-window.API_BASE_URL = "http://127.0.0.1:8000/api";
-BASE_URL = "http://127.0.0.1:8000";
+// window.API_BASE_URL = "http://127.0.0.1:8000/api";
+window.API_BASE_URL = "http://3.25.79.183:8000/api";
+// BASE_URL = "http://127.0.0.1:8000";
+BASE_URL = "http://3.25.79.183:8000";
 
 function scanCamera() {
   return {
@@ -155,6 +157,85 @@ function deteksiSampah() {
   return {
     imageFile: null,
     imagePreview: null,
+    useCamera: false,
+    stream: null,
+    loading: false,
+
+    loadUpload() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        Swal.fire(
+          "Unauthorized",
+          "Silakan login terlebih dahulu.",
+          "error"
+        ).then(() => {
+          window.location.href = "./login.html";
+          return;
+        });
+      }
+    },
+
+    async initCameraIfNeeded() {
+      if (this.useCamera) {
+        await this.startCamera();
+      }
+    },
+
+    async toggleCamera() {
+      this.useCamera = !this.useCamera;
+      if (this.useCamera) {
+        await this.startCamera();
+      } else {
+        this.stopCamera();
+      }
+    },
+
+    async startCamera() {
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        this.$refs.video.srcObject = this.stream;
+      } catch (error1) {
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          this.$refs.video.srcObject = this.stream;
+        } catch (error2) {
+          Swal.fire(
+            "Error",
+            "Gagal mengakses kamera. Pastikan izin telah diberikan dan situs diakses melalui HTTPS.",
+            "error"
+          );
+          this.useCamera = false;
+        }
+      }
+    },
+
+    stopCamera() {
+      if (this.stream) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+      }
+    },
+
+    capturePhoto() {
+      const video = this.$refs.video;
+      const canvas = this.$refs.canvas;
+      const context = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        this.imageFile = blob;
+        this.imagePreview = URL.createObjectURL(blob);
+        this.stopCamera(); // auto stop kamera setelah ambil foto
+        this.useCamera = false;
+      }, "image/jpeg");
+    },
 
     handleFileChange(event) {
       const file = event.target.files[0];
@@ -214,6 +295,8 @@ function deteksiSampah() {
         return;
       }
 
+      this.loading = true;
+
       const token = await this.checkAndRefreshToken();
       if (!token) return;
 
@@ -237,6 +320,196 @@ function deteksiSampah() {
       } catch (error) {
         console.error(error);
         Swal.fire("Error", "Terjadi kesalahan saat deteksi.", "error");
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    logout() {
+      Swal.fire({
+        title: "Logout?",
+        text: "Anda yakin ingin keluar?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Logout",
+        cancelButtonText: "Batal",
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const refresh = localStorage.getItem("refresh_token");
+
+          if (refresh) {
+            try {
+              await fetch(`${window.API_BASE_URL}/logout/`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ refresh }),
+              });
+            } catch (err) {
+              console.warn("Gagal logout dari server:", err);
+            }
+          }
+
+          // Hapus token lokal dan arahkan ke login
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "./login.html";
+        }
+      });
+    },
+  };
+}
+
+function deteksiSampahNotLogin() {
+  return {
+    imageFile: null,
+    imagePreview: null,
+    useCamera: false,
+    stream: null,
+    loading: false,
+
+    async initCameraIfNeeded() {
+      if (this.useCamera) {
+        await this.startCamera();
+      }
+    },
+
+    async toggleCamera() {
+      this.useCamera = !this.useCamera;
+      if (this.useCamera) {
+        await this.startCamera();
+      } else {
+        this.stopCamera();
+      }
+    },
+
+    async startCamera() {
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        this.$refs.video.srcObject = this.stream;
+      } catch (error1) {
+        try {
+          this.stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          this.$refs.video.srcObject = this.stream;
+        } catch (error2) {
+          Swal.fire(
+            "Error",
+            "Gagal mengakses kamera. Pastikan izin telah diberikan dan situs diakses melalui HTTPS.",
+            "error"
+          );
+          this.useCamera = false;
+        }
+      }
+    },
+
+    stopCamera() {
+      if (this.stream) {
+        this.stream.getTracks().forEach((track) => track.stop());
+        this.stream = null;
+      }
+    },
+
+    capturePhoto() {
+      const video = this.$refs.video;
+      const canvas = this.$refs.canvas;
+      const context = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        this.imageFile = blob;
+        this.imagePreview = URL.createObjectURL(blob);
+        this.stopCamera(); // auto stop kamera setelah ambil foto
+        this.useCamera = false;
+      }, "image/jpeg");
+    },
+
+    handleFileChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.imageFile = file;
+        this.imagePreview = URL.createObjectURL(file);
+      }
+    },
+
+    async checkAndRefreshToken() {
+      const access = localStorage.getItem("access_token");
+      const refresh = localStorage.getItem("refresh_token");
+
+      // Tidak ada token sama sekali
+      if (!access || !refresh) {
+        Swal.fire("Unauthorized", "Silakan login terlebih dahulu.", "error");
+        window.location.href = "./login.html";
+        return null;
+      }
+
+      // Coba verifikasi access token
+      const verifyRes = await fetch(`${window.API_BASE_URL}/token/verify/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: access }),
+      });
+
+      if (verifyRes.status === 200) {
+        return access; // token masih valid
+      }
+
+      // Token tidak valid → coba refresh
+      const refreshRes = await fetch(`${window.API_BASE_URL}/token/refresh/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh: refresh }),
+      });
+
+      if (refreshRes.status === 200) {
+        const data = await refreshRes.json();
+        localStorage.setItem("access_token", data.access);
+        return data.access;
+      } else {
+        Swal.fire("Session Expired", "Silakan login ulang.", "error");
+        window.location.href = "./login.html";
+        return null;
+      }
+    },
+
+    async submitDetection() {
+      if (!this.imageFile) {
+        Swal.fire(
+          "Gagal",
+          "Silakan pilih atau ambil gambar terlebih dahulu.",
+          "warning"
+        );
+        return;
+      }
+
+      this.loading = true;
+
+      const formData = new FormData();
+      formData.append("image", this.imageFile);
+
+      try {
+        const response = await fetch(`${window.API_BASE_URL}/detect/image/`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) throw new Error("Gagal memproses deteksi");
+
+        const result = await response.json();
+        localStorage.setItem("detectionResult", JSON.stringify(result));
+        window.location.href = "./hasildeteksinotlogin.html";
+      } catch (error) {
+        console.error(error);
+        Swal.fire("Error", "Terjadi kesalahan saat deteksi.", "error");
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -311,6 +584,29 @@ function detectionResult() {
   };
 }
 
+function detectionResultNotLogin() {
+  return {
+    result: null,
+    loadResult() {
+      const savedResult = localStorage.getItem("detectionResult");
+      console.log(savedResult);
+      if (!savedResult) {
+        Swal.fire(
+          "Data tidak ditemukan",
+          "Silakan lakukan deteksi terlebih dahulu.",
+          "warning"
+        );
+        window.location.href = "./upload.html";
+        return;
+      }
+      this.result = JSON.parse(savedResult);
+    },
+    formatConfidence(conf) {
+      return (conf * 100).toFixed(2) + "%";
+    },
+  };
+}
+
 function historiDeteksi() {
   return {
     items: [],
@@ -350,12 +646,16 @@ function historiDeteksi() {
     },
 
     async fetchHistory() {
-      let token = localStorage.getItem("access_token");
-
+      const token = localStorage.getItem("access_token");
       if (!token) {
-        Swal.fire("Unauthorized", "Silakan login terlebih dahulu.", "error");
-        window.location.href = "./login.html";
-        return;
+        Swal.fire(
+          "Unauthorized",
+          "Silakan login terlebih dahulu.",
+          "error"
+        ).then(() => {
+          window.location.href = "./login.html";
+          return;
+        });
       }
 
       try {
