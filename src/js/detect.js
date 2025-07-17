@@ -24,7 +24,11 @@ function scanCamera() {
       this.canvas.height = 480;
 
       navigator.mediaDevices
-        .getUserMedia({ video: true })
+        .getUserMedia({
+          video: {
+            facingMode: { exact: "environment" },
+          },
+        })
         .then((stream) => {
           this.video.srcObject = stream;
           this.video.play();
@@ -37,7 +41,30 @@ function scanCamera() {
         })
         .catch((err) => {
           console.error("Kamera gagal diakses", err);
-          Swal.fire("Akses Kamera Gagal", "Periksa izin kamera.", "error");
+          if (err.name === "OverconstrainedError") {
+            navigator.mediaDevices
+              .getUserMedia({ video: true })
+              .then((stream) => {
+                this.video.srcObject = stream;
+                this.video.play();
+                this.scanning = true;
+                requestAnimationFrame(this.renderLoop.bind(this));
+                this.detectIntervalId = setInterval(
+                  this.detectFrame.bind(this),
+                  this.frameInterval
+                );
+              })
+              .catch((fallbackErr) => {
+                console.error("Fallback juga gagal", fallbackErr);
+                Swal.fire(
+                  "Akses Kamera Gagal",
+                  "Periksa izin kamera.",
+                  "error"
+                );
+              });
+          } else {
+            Swal.fire("Akses Kamera Gagal", "Periksa izin kamera.", "error");
+          }
         });
     },
 
