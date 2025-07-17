@@ -8,61 +8,61 @@ function registerForm() {
     email: "",
     password: "",
     async register() {
-      try {
-        const res = await fetch(`${window.API_BASE_URL}/register/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            username: this.username,
-            email: this.email,
-            password: this.password,
-          }),
-        });
+      const res = await fetch(`${window.API_BASE_URL}/register/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: this.username,
+          email: this.email,
+          password: this.password,
+        }),
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) {
-          if (typeof data === "object" && !Array.isArray(data)) {
-            let errorMessages = "";
-            for (let key in data) {
-              if (Array.isArray(data[key])) {
-                errorMessages += `${key}: ${data[key].join(", ")}<br>`;
-              }
+      if (!res.ok) {
+        if (typeof data === "object" && !Array.isArray(data)) {
+          let errorMessages = "";
+          for (let key in data) {
+            if (Array.isArray(data[key])) {
+              errorMessages += `${key}: ${data[key].join(", ")}<br>`;
             }
-
-            Swal.fire({
-              icon: "error",
-              title: "Login Gagal",
-              html: errorMessages || "Terjadi kesalahan pada server.",
-            });
-          } else {
-            Swal.fire({
-              icon: "error",
-              title: "Login Gagal",
-              text: data.detail || "Terjadi kesalahan.",
-            });
           }
-          return;
-        }
 
-        Swal.fire({
-          icon: "success",
-          title: "Berhasil Mendaftar",
-          text: "Anda akan diarahkan Ke Halaman Login",
-          timer: 2000,
-          showConfirmButton: false,
-        }).then(() => {
-          window.location.href = "./login.html"; // ganti sesuai halaman kamu
-        });
-      } catch (error) {
-        Swal.fire({
-          icon: "error",
-          title: "Kesalahan Jaringan",
-          text: "Tidak dapat terhubung ke server.",
-        });
+          Swal.fire({
+            icon: "error",
+            title: "Login Gagal",
+            html: errorMessages || "Terjadi kesalahan pada server.",
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Login Gagal",
+            text: data.detail || "Terjadi kesalahan.",
+          });
+        }
+        return;
       }
+
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil Mendaftar",
+        text: "Anda akan diarahkan Ke Halaman Login",
+        timer: 2000,
+        showConfirmButton: false,
+      }).then(() => {
+        window.location.href = "./login.html"; // ganti sesuai halaman kamu
+      });
+      // try {
+      // } catch (error) {
+      //   Swal.fire({
+      //     icon: "error",
+      //     title: "Kesalahan Jaringan",
+      //     text: "Tidak dapat terhubung ke server.",
+      //   });
+      // }
     },
   };
 }
