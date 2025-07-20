@@ -1,5 +1,5 @@
 // window.API_BASE_URL = "http://127.0.0.1:8000/api";
-window.API_BASE_URL = "http://3.26.144.192:8000/api";
+window.API_BASE_URL = "https://wasteapi.labtekcmr.com/api";
 
 // Fetch Register
 function registerForm() {
